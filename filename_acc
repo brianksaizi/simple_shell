@@ -1,0 +1,93 @@
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define MAX_COMMAND_LENGTH 100
+#define MAX_FILEPATH_LENGTH 100
+
+/**
+ * @brief Execute a command.
+ *
+ * This function takes a command as a string and executes it using system calls.
+ *
+ * @param command The command to execute.
+ */
+void execute_command(char *command) {
+    // Create a child process
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("fork");
+        exit(1);
+    } else if (pid == 0) { // Child process
+        // Tokenize the command
+        char *args[MAX_COMMAND_LENGTH];
+        int arg_count = 0;
+        char *token = strtok(command, " \t\n");
+
+        while (token != NULL) {
+            args[arg_count] = token;
+            arg_count++;
+            token = strtok(NULL, " \t\n");
+        }
+        args[arg_count] = NULL;
+
+        // Execute the command
+        execvp(args[0], args);
+
+        // If execvp() fails
+        perror("execvp");
+        exit(1);
+    } else { // Parent process
+        int status;
+        waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status)) {
+            printf("Child process exited with status %d\n", WEXITSTATUS(status));
+        }
+    }
+}
+
+/**
+ * @brief Entry point of the simple shell.
+ *
+ * @param argc (Argument Count):
+ * - Represents the number of command-line arguments passed to the program.
+ * - Includes the program's name as the first argument.
+ * - Indicates the total count of arguments available.
+ *
+ * @param argv (Argument Vector):
+ * - An array of strings (character pointers) containing command-line arguments.
+ * - Each element in argv represents an argument, with argv[0] being the program name.
+ *
+ * @return Always 0 (success)
+ */
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s [filename]\n", argv[0]);
+        exit(1);
+    }
+
+    char filename[MAX_FILEPATH_LENGTH];
+    strncpy(filename, argv[1], MAX_FILEPATH_LENGTH);
+
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("fopen");
+        exit(1);
+    }
+
+    char command[MAX_COMMAND_LENGTH];
+    while (fgets(command, sizeof(command), file) != NULL) {
+        // Remove trailing newline character
+        command[strcspn(command, "\n")] = '\0';
+
+        // Execute the command
+        execute_command(command);
+    }
+
+    fclose(file);
+
+    return 0;
+}

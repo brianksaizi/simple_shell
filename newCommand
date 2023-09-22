@@ -1,0 +1,32 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/**
+ * main - Entry point of the simple shell
+ *
+ * Return: Always 0 (success)
+ */
+int main() {
+    char input[256]; // Assuming a maximum input length of 256 characters
+
+    while (1) {
+        printf("$ "); // Display the shell prompt
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            break; // Handle end-of-file (Ctrl+D) or other errors
+        }
+
+        // Remove the trailing newline character from input
+        input[strcspn(input, "\n")] = '\0';
+
+        if (input[0] == '#') {
+            // Ignore lines starting with '#'
+            continue;
+        }
+
+        // Process the command (execute it or do whatever you need)
+        printf("Executing command: %s\n", input);
+    }
+
+    return 0;
+}

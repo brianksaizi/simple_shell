@@ -1,0 +1,82 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/**
+ * replaceVariables - Function to replace variables in a command.
+ * @command: The input command.
+ *
+ * Return: The command with variables replaced.
+ */
+char *replaceVariables(char *command) {
+    char *result = strdup(command); // Duplicate the input command
+
+    // Replace $?
+    char *exitCode = getenv("?"); // Get the exit code as a string
+    if (exitCode != NULL) {
+        char *pos = strstr(result, "$?");
+        if (pos != NULL) {
+            memmove(pos + strlen(exitCode), pos + 2, strlen(pos + 2) + 1);
+            memcpy(pos, exitCode, strlen(exitCode));
+        }
+    }
+
+    // Replace $$
+    char *pid = malloc(16); // Allocate space for the PID as a string
+    snprintf(pid, 16, "%ld", (long)getpid()); // Convert the PID to a string
+    char *pidVar = getenv("$$"); // Get the $$ variable as a string
+    if (pidVar != NULL) {
+        char *pos = strstr(result, "$$");
+        if (pos != NULL) {
+            memmove(pos + strlen(pidVar), pos + 2, strlen(pos + 2) + 1);
+            memcpy(pos, pidVar, strlen(pidVar));
+        }
+    }
+
+    free(pid); // Free the allocated PID string
+
+    return result;
+}
+
+/**
+ * main - Entry point of the simple shell
+ *
+ * Return: Always 0 (success)
+ */
+
+int main() {
+    char *input;
+    char *command;
+
+    while (1) {
+        printf("$ ");
+        input = NULL;
+        size_t len = 0;
+        ssize_t read;
+
+        // Read the user's input
+        read = getline(&input, &len, stdin);
+
+        if (read == -1) {
+            perror("getline");
+            exit(EXIT_FAILURE);
+        }
+
+        // Remove the newline character at the end
+        if (input[read - 1] == '\n') {
+            input[read - 1] = '\0';
+        }
+
+        // Replace variables in the command
+        command = replaceVariables(input);
+
+        // Display the updated command
+        printf("%s\n", command);
+
+        free(input);
+        free(command);
+    }
+
+    return 0;
+}

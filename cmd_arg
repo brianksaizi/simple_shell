@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/**
+ * main - Entry point for the simple shell
+ *
+ * Return: Always 0
+ */
+int main(void)
+{
+    char *command = NULL;
+    size_t command_size = 0;
+    ssize_t read_bytes;
+    int status;
+
+    while (1)
+    {
+        printf("#cisfun$ ");
+        fflush(stdout);
+
+        read_bytes = getline(&command, &command_size, stdin);
+        if (read_bytes == -1)
+        {
+            if (feof(stdin)) /* End of file (Ctrl+D) */
+            {
+                free(command);
+                putchar('\n');
+                exit(EXIT_SUCCESS);
+            }
+            perror("getline");
+            exit(EXIT_FAILURE);
+        }
+
+        if (read_bytes > 0 && command[read_bytes - 1] == '\n')
+            command[read_bytes - 1] = '\0'; /* Remove newline character */
+
+        if (strcmp(command, "exit") == 0)
+        {
+            free(command);
+            exit(EXIT_SUCCESS);
+        }
+
+        char *args[100]; // Maximum number of arguments (adjust as needed)
+        int arg_count = 0;
+
+        char *token = strtok(command, " ");
+        while (token != NULL)
+        {
+            args[arg_count++] = token;
+            token = strtok(NULL, " ");
+        }
+        args[arg_count] = NULL; // Null-terminate the argument array
+
+        pid_t child_pid = fork();
+
+        if (child_pid == -1)
+        {
+            perror("fork");
+            free(command);
+            exit(EXIT_FAILURE);
+        }
+
+        if (child_pid == 0) /* Child process */
+        {
+            if (execve(args[0], args, NULL) == -1)
+            {
+                perror("execve");
+                free(command);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else /* Parent process */
+        {
+            wait(&status);
+            if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
+            {
+                fprintf(stderr, "./shell: %s: not found\n", args[0]);
+            }
+        }
+    }
+
+    return (0);
+}
